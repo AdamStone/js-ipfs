@@ -11,6 +11,7 @@ const DAGService = mDAG.DAGService
 const Id = require('peer-id')
 const Info = require('peer-info')
 const multiaddr = require('multiaddr')
+const libp2p = require('libp2p-ipfs')
 
 exports = module.exports = IPFS
 
@@ -26,7 +27,7 @@ function IPFS (repo) {
   const blockS = new BlockService(repo)
   const dagS = new DAGService(blockS)
   var peerInfo
-  // var libp2pNode
+  var libp2pNode
 
   this.load = (callback) => {
     repo.exists((err, exists) => {
@@ -304,9 +305,18 @@ function IPFS (repo) {
   }
 
   this.libp2p = {
-    start: () => {
+    start: (callback) => {
+      libp2pNode = new libp2p.Node(peerInfo)
+      libp2pNode.start(() => {
+        // TODO connect to bootstrap nodes, it will get us more addrs
+        peerInfo.multiaddrs.forEach((ma) => {
+          console.log('Swarm listening on', ma.toString())
+        })
+        callback()
+      })
     },
-    stop: () => {
+    stop: (callback) => {
+      libp2pNode.swarm.close(callback)
     },
     swarm: {
       peers: notImpl,
