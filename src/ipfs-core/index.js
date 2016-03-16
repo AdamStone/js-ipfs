@@ -305,7 +305,6 @@ function IPFS (repo) {
 
   this.libp2p = {
     start: () => {
-
     },
     stop: () => {
     },
