@@ -243,3 +243,66 @@ exports.links = {
     })
   }
 }
+
+exports.patchAppendData = {
+  // pre request handler that parses the args and returns `data` & `key` which are assigned to `request.pre.args`
+  parseArgs: (request, reply) => {
+    if (!request.query.arg) {
+      return reply("Argument 'root' is required").code(400).takeover()
+    }
+
+    if (!request.payload) {
+      return reply("File argument 'data' is required").code(400).takeover()
+    }
+
+    const parser = multipart.reqParser(request.payload)
+    let file
+
+    parser.on('file', (fileName, fileStream) => {
+      fileStream.on('data', (data) => {
+        file = data
+      })
+    })
+
+    parser.on('end', () => {
+      if (!file) {
+        return reply("File argument 'data' is required").code(400).takeover()
+      }
+
+      try {
+        return reply({
+          data: file,
+          key: new Buffer(bs58.decode(request.query.arg)) // TODO: support ipfs paths: https://github.com/ipfs/http-api-spec/pull/68/files#diff-2625016b50d68d922257f74801cac29cR3880
+        })
+      } catch (err) {
+        return reply({
+          Message: 'invalid ipfs ref path',
+          Code: 0
+        }).code(500).takeover()
+      }
+    })
+  },
+
+  // main route handler which is called after the above `parseArgs`, but only if the args were valid
+  handler: (request, reply) => {
+    const key = request.pre.args.key
+    const data = request.pre.args.data
+
+    ipfs.object.patch.appendData(key, data, (err, mh) => {
+      if (err) {
+        log.error(err)
+        console.log(err)
+
+        return reply({
+          Message: 'Failed to apend data to object: ' + err,
+          Code: 0
+        }).code(500)
+      }
+
+      return reply({
+        Hash: bs58.encode(mh).toString(),
+        Links: null // https://github.com/ipfs/http-api-spec/pull/68/files#r56554788
+      })
+    })
+  }
+}

@@ -76,4 +76,19 @@ module.exports = (server) => {
       handler: resources.object.links.handler
     }
   })
+
+  api.route({
+    method: '*',
+    path: '/api/v0/object/patch/append-data',
+    config: {
+      payload: {
+        parse: false,
+        output: 'stream'
+      },
+      pre: [
+        { method: resources.object.patchAppendData.parseArgs, assign: 'args' }
+      ],
+      handler: resources.object.patchAppendData.handler
+    }
+  })
 }

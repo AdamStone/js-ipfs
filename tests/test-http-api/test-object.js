@@ -266,6 +266,79 @@ describe('object', () => {
         })
       })
     })
+
+    describe('/object/patch/append-data', () => {
+      it('returns 400 for request without key', (done) => {
+        api.inject({
+          method: 'GET',
+          url: '/api/v0/object/patch/append-data'
+        }, (res) => {
+          expect(res.statusCode).to.equal(400)
+          expect(res.result).to.be.a('string')
+          done()
+        })
+      })
+
+      it('returns 400 if no data is provided', (done) => {
+        const form = new FormData()
+        const headers = form.getHeaders()
+
+        streamToPromise(form).then((payload) => {
+          api.inject({
+            method: 'POST',
+            url: '/api/v0/object/patch/append-data?arg=QmVLUHkjGg3duGb5w3dnwK5w2P9QWuJmtVNuDPLc9ZDjzk',
+            headers: headers,
+            payload: payload
+          }, (res) => {
+            expect(res.statusCode).to.equal(400)
+            done()
+          })
+        })
+      })
+
+      it('returns 500 for request with invalid key', (done) => {
+        const form = new FormData()
+        const filePath = 'tests/badconfig'
+        form.append('file', fs.createReadStream(filePath))
+        const headers = form.getHeaders()
+
+        streamToPromise(form).then((payload) => {
+          api.inject({
+            method: 'POST',
+            url: '/api/v0/object/patch/append-data?arg=invalid',
+            headers: headers,
+            payload: payload
+          }, (res) => {
+            expect(res.statusCode).to.equal(500)
+            done()
+          })
+        })
+      })
+
+      it('updates value', (done) => {
+        const form = new FormData()
+        const filePath = 'tests/badconfig'
+        form.append('data', fs.createReadStream(filePath))
+        const headers = form.getHeaders()
+        const expectedResult = {
+          Hash: 'QmfY37rjbPCZRnhvvJuQ46htW3VCAWziVB991P79h6WSv6',
+          Links: null
+        }
+
+        streamToPromise(form).then((payload) => {
+          api.inject({
+            method: 'POST',
+            url: '/api/v0/object/patch/append-data?arg=QmdfTbBqBPQ7VNxZEYEj14VmRuZBkqFbiwReogJgS1zR1n',
+            headers: headers,
+            payload: payload
+          }, (res) => {
+            expect(res.statusCode).to.equal(200)
+            expect(res.result).to.deep.equal(expectedResult)
+            done()
+          })
+        })
+      })
+    })
   })
 
   describe('using js-ipfs-api', () => {
@@ -421,6 +494,48 @@ describe('object', () => {
         ctl.object.links('QmZZmY4KCu9r3e7M2Pcn46Fc5qbn6NpzaAGaYb22kbfTqm', (err, result) => {
           expect(err).to.not.exist
           expect(result).to.deep.equal(expectedResult)
+          done()
+        })
+      })
+    })
+
+    describe('/object/patch/append-data', () => {
+      it('returns error for request without key & data', (done) => {
+        ctl.object.patch.appendData(null, null, (err) => {
+          expect(err).to.exist
+          done()
+        })
+      })
+
+      it('returns error for request without key', (done) => {
+        const key = 'QmVLUHkjGg3duGb5w3dnwK5w2P9QWuJmtVNuDPLc9ZDjzk'
+
+        ctl.object.patch.appendData(key, null, (err) => {
+          expect(err).to.exist
+          done()
+        })
+      })
+
+      it('returns error for request without data', (done) => {
+        const filePath = 'tests/badnode.json'
+
+        ctl.object.patch.appendData(null, filePath, (err) => {
+          expect(err).to.exist
+          done()
+        })
+      })
+
+      it('updates value', (done) => {
+        const key = 'QmdfTbBqBPQ7VNxZEYEj14VmRuZBkqFbiwReogJgS1zR1n'
+        const filePath = 'tests/badnode.json'
+        const expectedResult = {
+          Hash: 'QmfY37rjbPCZRnhvvJuQ46htW3VCAWziVB991P79h6WSv6',
+          Links: null
+        }
+
+        ctl.object.patch.appendData(key, filePath, (err, res) => {
+          expect(err).not.to.exist
+          expect(res).to.deep.equal(expectedResult)
           done()
         })
       })
