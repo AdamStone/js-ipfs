@@ -119,6 +119,7 @@ function prepareFile (self, opts, file, callback) {
 
   waterfall([
     (cb) => self.object.get(file.multihash, cb),
+    (node, cb) => self.pin.add(file.multihash, cb),
     (node, cb) => {
       let cid = new CID(node.multihash)
 
